@@ -14,6 +14,8 @@ export class Final_Project extends Component {
         this.materials = {
             plastic: {shader: new defs.Phong_Shader(), ambient: .2, diffusivity: 1, specularity: .5, color: color(.9, .5, .9, 1)},
         };
+
+        this.seafloor = new Seafloor();
     }
 
     render_animation(caller) {
@@ -26,11 +28,13 @@ export class Final_Project extends Component {
         this.uniforms.projection_transform = Mat4.perspective(Math.PI / 4, caller.width / caller.height, 1, 200);
 
         const t = this.t = this.uniforms.animation_time / 1000;
-        const light_position = vec4(0, 5, 5, 1);
-        this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 1000)];
+        const light_position = vec4(0, 30, 0, 1);
+        this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 100000)];
+
+        this.seafloor.draw(caller, this.uniforms);
 
         // Placeholder shapes
-        this.shapes.sphere.draw(caller, this.uniforms, Mat4.translation(-2, 0, 0), this.materials.plastic);
-        this.shapes.cube.draw(caller, this.uniforms, Mat4.translation(2, 0, 0), this.materials.plastic);
+        this.shapes.sphere.draw(caller, this.uniforms, Mat4.translation(-2, 3, 0), this.materials.plastic);
+        this.shapes.cube.draw(caller, this.uniforms, Mat4.translation(2, 3, 0), this.materials.plastic);
     }
 }
