@@ -1,5 +1,5 @@
 import {tiny, defs} from './examples/common.js';
-import {Underwater_Camera, Seafloor, Coral_Collection, Underwater_Shader, Bubble_System} from './underwater/index.js';
+import {Underwater_Camera, Seafloor, Coral_Collection, Underwater_Shader, Bubble_System, Plankton_System} from './underwater/index.js';
 
 // Pull these names into this module's scope for convenience:
 const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = tiny;
@@ -17,6 +17,7 @@ export class Final_Project extends Component {
 
         this.seafloor = new Seafloor();
         this.bubbles = new Bubble_System(this.seafloor);
+        this.plankton = new Plankton_System();
     }
 
     render_animation(caller) {
@@ -38,6 +39,8 @@ export class Final_Project extends Component {
         const dt = this.uniforms.animation_delta_time / 1000;
         this.bubbles.update(dt);
         this.bubbles.draw(caller, this.uniforms);
+        this.plankton.update(dt);
+        this.plankton.draw(caller, this.uniforms);
 
         // Placeholder shapes
         this.shapes.sphere.draw(caller, this.uniforms, Mat4.translation(-2, 3, 0), this.materials.plastic);

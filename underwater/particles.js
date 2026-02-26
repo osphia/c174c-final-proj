@@ -116,3 +116,84 @@ export class Bubble_System {
         }
     }
 }
+
+
+export class Plankton_System {
+    constructor() {
+        this.shape = new defs.Subdivision_Sphere(1);
+        this.material = {
+            shader: new defs.Phong_Shader(),
+            ambient: 0.8,
+            diffusivity: 0.2,
+            specularity: 0.0,
+            smoothness: 10,
+            color: color(0.6, 0.75, 0.5, 0.4),
+        };
+
+        // Global slow current direction
+        this.current = vec3(0.15, 0, 0.08);
+
+        this.max_particles = 200;
+        this.spawn_range = 40; // spawn within this radius of origin
+        this.min_y = 1;
+        this.max_y = 20;
+
+        this.particles = [];
+        for (let i = 0; i < this.max_particles; i++) {
+            this.particles.push(this._new_particle());
+        }
+    }
+
+    _new_particle() {
+        return {
+            position: vec3(
+                (Math.random() - 0.5) * 2 * this.spawn_range,
+                this.min_y + Math.random() * (this.max_y - this.min_y),
+                (Math.random() - 0.5) * 2 * this.spawn_range,
+            ),
+            velocity: vec3(0, 0, 0),
+            life: Math.random() * 15, // stagger initial ages
+            max_life: 12 + Math.random() * 8,
+            size: 0.02 + Math.random() * 0.04,
+        };
+    }
+
+    update(dt) {
+        if (dt <= 0 || dt > 0.1) return;
+
+        const drag_coeff = 2.0;
+
+        for (const p of this.particles) {
+            p.life += dt;
+            if (p.life > p.max_life) {
+                // Respawn
+                const fresh = this._new_particle();
+                p.position = fresh.position;
+                p.velocity = vec3(0, 0, 0);
+                p.life = 0;
+                p.max_life = fresh.max_life;
+                p.size = fresh.size;
+                continue;
+            }
+
+            // Brownian noise + slow current
+            const noise = vec3(
+                (Math.random() - 0.5) * 1.0,
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 1.0,
+            );
+            const drag = p.velocity.times(-drag_coeff);
+            const accel = this.current.plus(noise).plus(drag);
+            p.velocity = p.velocity.plus(accel.times(dt));
+            p.position = p.position.plus(p.velocity.times(dt));
+        }
+    }
+
+    draw(caller, uniforms) {
+        for (const p of this.particles) {
+            const transform = Mat4.translation(p.position[0], p.position[1], p.position[2])
+                .times(Mat4.scale(p.size, p.size, p.size));
+            this.shape.draw(caller, uniforms, transform, this.material);
+        }
+    }
+}
