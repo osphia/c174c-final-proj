@@ -1,4 +1,5 @@
 import {tiny, defs} from './examples/common.js';
+import {Underwater_Camera, Seafloor, Coral_Collection, Underwater_Shader} from './underwater/index.js';
 
 // Pull these names into this module's scope for convenience:
 const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = tiny;
@@ -31,6 +32,8 @@ export class Final_Project extends Component {
         const light_position = vec4(0, 5, 5, 1);
         this.uniforms.lights = [defs.Phong_Shader.light_source(light_position, color(1, 1, 1, 1), 1000)];
 
-        // *** Draw scene here ***
+        // Draw placeholder shapes to verify imports work
+        this.shapes.sphere.draw(caller, this.uniforms, Mat4.translation(-2, 0, 0), this.materials.plastic);
+        this.shapes.cube.draw(caller, this.uniforms, Mat4.translation(2, 0, 0), this.materials.plastic);
     }
 }
