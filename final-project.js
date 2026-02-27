@@ -1,7 +1,8 @@
 import {tiny, defs} from './examples/common.js';
 import {Underwater_Camera, Seafloor, Coral_Collection, Underwater_Shader,
         Bubble_System, Plankton_System,
-        Jellyfish_School, Sea_Turtle, Manta_Ray} from './underwater/index.js';
+        Jellyfish_School, Sea_Turtle, Manta_Ray,
+        Fish_Manager} from './underwater/index.js';
 
 // Pull these names into this module's scope for convenience:
 const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = tiny;
@@ -16,6 +17,9 @@ export class Final_Project extends Component {
 
         // Shared obstacle list for P2 (boid avoidance)
         this.obstacles = this.corals.get_obstacles(this.seafloor);
+
+        // P2 — Fish schools (boids + articulated models)
+        this.fish_manager = new Fish_Manager(this.obstacles);
 
         // P3 — Creatures & Curves
         this.jellyfish = new Jellyfish_School();
@@ -54,6 +58,11 @@ export class Final_Project extends Component {
         this.bubbles.draw(caller, this.uniforms);
         this.plankton.update(dt);
         this.plankton.draw(caller, this.uniforms);
+
+        // P2 — Fish
+        const cam_pos = caller.controls ? caller.controls.position : vec3(0, 5, 0);
+        this.fish_manager.update(Math.min(dt, 0.05), cam_pos);
+        this.fish_manager.draw(caller, this.uniforms);
 
         this.jellyfish.update(dt, t);
         this.jellyfish.draw(caller, this.uniforms, t);
