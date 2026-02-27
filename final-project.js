@@ -46,9 +46,6 @@ export class Final_Project extends Component {
         this.plankton.update(dt);
         this.plankton.draw(caller, this.uniforms);
 
-        // Placeholder shapes
-        this.shapes.sphere.draw(caller, this.uniforms, Mat4.translation(-2, 3, 0), this.materials.plastic);
-        this.shapes.cube.draw(caller, this.uniforms, Mat4.translation(2, 3, 0), this.materials.plastic);
         this.corals.draw(caller, this.uniforms, this.seafloor);
     }
 }
