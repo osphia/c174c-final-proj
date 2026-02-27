@@ -13,6 +13,8 @@ export class Underwater_Camera extends Component {
     pitch_limit = Math.PI * 0.47;
 
     mouse_enabled_canvases = new Set();
+    keyboard_enabled = false;
+    keys_down = new Set();
     will_take_over_uniforms = true;
 
     init() {}
@@ -38,6 +40,20 @@ export class Underwater_Camera extends Component {
         canvas.addEventListener("mouseout", e => {
             if (!this.mouse.anchor) this.mouse.from_center.scale_by(0);
         });
+
+        // Keyboard controls should not depend on the control panel existing.
+        // Bind once globally so WASD / space / z always work.
+        if (!this.keyboard_enabled) {
+            this.keyboard_enabled = true;
+            const down = (e) => {
+                this.keys_down.add(e.key.toLowerCase());
+            };
+            const up = (e) => {
+                this.keys_down.delete(e.key.toLowerCase());
+            };
+            document.addEventListener('keydown', down);
+            document.addEventListener('keyup', up);
+        }
     }
 
     render_controls() {
@@ -73,6 +89,17 @@ export class Underwater_Camera extends Component {
     render_animation(caller) {
         const dt = this.uniforms.animation_delta_time / 1000;
         if (dt <= 0 || dt > 0.1) return;
+
+        // Convert current pressed keys -> thrust each frame.
+        // (Keeps behavior consistent even if the controls panel isn't open.)
+        const kd = this.keys_down;
+        this.thrust = vec3(0, 0, 0);
+        if (kd.has('w')) this.thrust[2] = 1;
+        if (kd.has('s')) this.thrust[2] = -1;
+        if (kd.has('a')) this.thrust[0] = -1;
+        if (kd.has('d')) this.thrust[0] = 1;
+        if (kd.has(' ') || kd.has('space')) this.thrust[1] = 1;
+        if (kd.has('z')) this.thrust[1] = -1;
 
         // Mouse movement
         if (this.mouse && this.mouse.from_center) {
