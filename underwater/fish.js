@@ -463,4 +463,13 @@ export class Fish_Manager {
         for (const { school, material } of this.schools)
             school.draw(caller, uniforms, this.shape, material);
     }
+
+    /** Return flat array of all fish objects (each has .position, .size, .heading). */
+    get_all_fish() {
+        const result = [];
+        for (const { school } of this.schools)
+            for (const f of school.fish)
+                result.push(f);
+        return result;
+    }
 }

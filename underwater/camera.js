@@ -12,12 +12,18 @@ export class Underwater_Camera extends Component {
     mouse_sensitivity = 1 / 300;
     pitch_limit = Math.PI * 0.47;
 
-    // Swim bob — gentle sinusoidal sway to simulate floating
+    // Swim bob — sinusoidal sway to simulate floating
     bob_time = 0;
-    bob_y_amp = 0.06;       // vertical bob amplitude
-    bob_y_freq = 0.8;       // vertical bob frequency (Hz)
-    bob_roll_amp = 0.008;   // roll tilt amplitude (radians)
-    bob_roll_freq = 0.5;    // roll tilt frequency (Hz)
+    bob_y_amp = 0.06;
+    bob_y_freq = 0.8;
+    bob_roll_amp = 0.008;
+    bob_roll_freq = 0.5;
+
+    // Follow-mode — click a fish to track it
+    follow_target = null;
+    follow_distance = 5;
+    follow_height = 2.5;
+    follow_lerp = 3.0;
 
     mouse_enabled_canvases = new Set();
     keyboard_enabled = false;
@@ -79,6 +85,12 @@ export class Underwater_Camera extends Component {
                 this.position[1].toFixed(1) + ", " +
                 this.position[2].toFixed(1);
         });
+        this.new_line();
+        this.live_string(box => {
+            box.textContent = this.follow_target
+                ? "Following fish (Esc to stop)"
+                : "Click a fish to follow it";
+        });
     }
 
     get_forward() {
@@ -98,7 +110,6 @@ export class Underwater_Camera extends Component {
         if (dt <= 0 || dt > 0.1) return;
 
         // Convert current pressed keys -> thrust each frame.
-        // (Keeps behavior consistent even if the controls panel isn't open.)
         const kd = this.keys_down;
         this.thrust = vec3(0, 0, 0);
         if (kd.has('w')) this.thrust[2] = 1;
@@ -107,6 +118,56 @@ export class Underwater_Camera extends Component {
         if (kd.has('d')) this.thrust[0] = 1;
         if (kd.has(' ') || kd.has('space')) this.thrust[1] = 1;
         if (kd.has('z')) this.thrust[1] = -1;
+
+        // Escape or any movement key exits follow mode
+        if (this.follow_target) {
+            if (kd.has('escape') || kd.has('w') || kd.has('a') || kd.has('s') || kd.has('d')
+                || kd.has(' ') || kd.has('z')) {
+                this.follow_target = null;
+            }
+        }
+
+        // Swim bob
+        this.bob_time += dt;
+        const bob_y = this.bob_y_amp * Math.sin(2 * Math.PI * this.bob_y_freq * this.bob_time);
+        const bob_roll = this.bob_roll_amp * Math.sin(2 * Math.PI * this.bob_roll_freq * this.bob_time);
+
+        // Follow mode: smooth chase camera behind fish
+        if (this.follow_target) {
+            const fish = this.follow_target;
+            const fish_pos = fish.position;
+
+            // Desired position: behind and above the fish
+            const behind_x = -Math.sin(fish.heading) * this.follow_distance;
+            const behind_z = -Math.cos(fish.heading) * this.follow_distance;
+            const desired = vec3(
+                fish_pos[0] + behind_x,
+                fish_pos[1] + this.follow_height,
+                fish_pos[2] + behind_z
+            );
+
+            // Smooth lerp toward desired position
+            const alpha = Math.min(1.0, this.follow_lerp * dt);
+            this.position = this.position.plus(desired.minus(this.position).times(alpha));
+            this.velocity = vec3(0, 0, 0);
+
+            // Floor clamp
+            if (this.seafloor_height_fn) {
+                const floor_y = this.seafloor_height_fn(this.position[0], this.position[2]) + 1.0;
+                if (this.position[1] < floor_y) {
+                    this.position = vec3(this.position[0], floor_y, this.position[2]);
+                }
+            }
+
+            // Look at the fish with swim bob
+            const eye = this.position.plus(vec3(0, bob_y, 0));
+            const up_tilted = vec3(Math.sin(bob_roll), Math.cos(bob_roll), 0);
+            const camera_matrix = Mat4.look_at(eye, fish_pos, up_tilted);
+            Shader.assign_camera(camera_matrix, this.uniforms);
+            return;
+        }
+
+        // Normal free-swim mode
 
         // Mouse movement
         if (this.mouse && this.mouse.from_center) {
@@ -145,11 +206,6 @@ export class Underwater_Camera extends Component {
                 if (this.velocity[1] < 0) this.velocity = vec3(this.velocity[0], 0, this.velocity[2]);
             }
         }
-
-        // Swim bob — subtle floating sway
-        this.bob_time += dt;
-        const bob_y = this.bob_y_amp * Math.sin(2 * Math.PI * this.bob_y_freq * this.bob_time);
-        const bob_roll = this.bob_roll_amp * Math.sin(2 * Math.PI * this.bob_roll_freq * this.bob_time);
 
         const eye = this.position.plus(vec3(0, bob_y, 0));
         const target = eye.plus(forward);
