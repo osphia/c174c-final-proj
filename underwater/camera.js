@@ -12,6 +12,13 @@ export class Underwater_Camera extends Component {
     mouse_sensitivity = 1 / 300;
     pitch_limit = Math.PI * 0.47;
 
+    // Swim bob — gentle sinusoidal sway to simulate floating
+    bob_time = 0;
+    bob_y_amp = 0.06;       // vertical bob amplitude
+    bob_y_freq = 0.8;       // vertical bob frequency (Hz)
+    bob_roll_amp = 0.008;   // roll tilt amplitude (radians)
+    bob_roll_freq = 0.5;    // roll tilt frequency (Hz)
+
     mouse_enabled_canvases = new Set();
     keyboard_enabled = false;
     keys_down = new Set();
@@ -139,10 +146,15 @@ export class Underwater_Camera extends Component {
             }
         }
 
-        // Build camera matrix
-        const eye = this.position;
+        // Swim bob — subtle floating sway
+        this.bob_time += dt;
+        const bob_y = this.bob_y_amp * Math.sin(2 * Math.PI * this.bob_y_freq * this.bob_time);
+        const bob_roll = this.bob_roll_amp * Math.sin(2 * Math.PI * this.bob_roll_freq * this.bob_time);
+
+        const eye = this.position.plus(vec3(0, bob_y, 0));
         const target = eye.plus(forward);
-        const camera_matrix = Mat4.look_at(eye, target, vec3(0, 1, 0));
+        const up_tilted = vec3(Math.sin(bob_roll), Math.cos(bob_roll), 0);
+        const camera_matrix = Mat4.look_at(eye, target, up_tilted);
         Shader.assign_camera(camera_matrix, this.uniforms);
     }
 }
