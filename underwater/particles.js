@@ -1,8 +1,7 @@
 import {vec3, vec4, color, Mat4, Shape, defs} from './utils.js';
 
 export class Bubble_System {
-    constructor(seafloor) {
-        this.seafloor = seafloor;
+    constructor() {
         this.shape = new defs.Subdivision_Sphere(2);
         this.material = {
             shader: new defs.Phong_Shader(),
@@ -13,23 +12,9 @@ export class Bubble_System {
             color: color(0.7, 0.85, 1.0, 0.5),
         };
 
-        // Emitter positions on the seafloor
-        this.emitters = [
-            vec3(3, 0, -3),
-            vec3(-6, 0, 8),
-            vec3(10, 0, -10),
-            vec3(-12, 0, -5),
-            vec3(7, 0, 12),
-        ];
-
-        for (let i = 0; i < this.emitters.length; i++) {
-            const e = this.emitters[i];
-            this.emitters[i] = vec3(e[0], this.seafloor.get_height(e[0], e[2]), e[2]);
-        }
-
         this.max_bubbles = 150;
-        this.spawn_rate = 0.15;
-        this.spawn_timers = this.emitters.map(() => 0);
+        this.spawn_timer = 0;
+        this.spawn_rate = 0.06;
 
         // Object pool: pre-allocate all bubbles
         this.bubbles = [];
@@ -67,16 +52,16 @@ export class Bubble_System {
         }
     }
 
-    update(dt) {
+    update(dt, fish_positions) {
         if (dt <= 0 || dt > 0.1) return;
+        if (!fish_positions || fish_positions.length === 0) return;
 
-        // Spawn new bubbles from each emitter
-        for (let i = 0; i < this.emitters.length; i++) {
-            this.spawn_timers[i] -= dt;
-            if (this.spawn_timers[i] <= 0) {
-                this.spawn_bubble(this.emitters[i]);
-                this.spawn_timers[i] = this.spawn_rate + Math.random() * 0.1;
-            }
+        // Spawn bubbles from random fish
+        this.spawn_timer -= dt;
+        while (this.spawn_timer <= 0) {
+            const src = fish_positions[Math.floor(Math.random() * fish_positions.length)];
+            this.spawn_bubble(src);
+            this.spawn_timer += this.spawn_rate;
         }
 
         // Update each active bubble
