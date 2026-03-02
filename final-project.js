@@ -11,7 +11,7 @@ export class Final_Project extends Component {
     init() {
         // Environment
         this.seafloor = new Seafloor();
-        this.bubbles  = new Bubble_System(this.seafloor);
+        this.bubbles  = new Bubble_System();
         this.plankton = new Plankton_System();
         this.corals   = new Coral_Collection();
 
@@ -105,8 +105,9 @@ export class Final_Project extends Component {
         this.seafloor.draw(caller, this.uniforms);
         this.corals.draw(caller, this.uniforms, this.seafloor);
 
-        // Particles
-        this.bubbles.update(dt);
+        // Particles — bubbles trail behind fish
+        const fish_positions = this.fish_manager.get_all_fish().map(f => f.position);
+        this.bubbles.update(dt, fish_positions);
         this.bubbles.draw(caller, this.uniforms);
         this.plankton.update(dt);
         this.plankton.draw(caller, this.uniforms);
