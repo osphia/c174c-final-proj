@@ -242,7 +242,7 @@ export class Jellyfish_School {
             tentacle_cyl: new defs.Capped_Cylinder(6, 6),
         };
 
-        const shader = new defs.Phong_Shader(2);
+        const shader = new defs.Phong_Shader(8);
         this._mat_bell = {
             shader,
             ambient: 0.55, diffusivity: 0.35, specularity: 0.9, smoothness: 70,
@@ -286,9 +286,19 @@ export class Jellyfish_School {
         for (const j of this.jellyfish) j.update(dt, t);
     }
 
-    draw(caller, uniforms, t) {
+    draw(caller, uniforms, t, night_blend = 0) {
+        const bell_mat = {
+            ...this._mat_bell,
+            ambient: this._mat_bell.ambient * (1 - night_blend) + 0.95 * night_blend,
+            diffusivity: this._mat_bell.diffusivity * (1 - 0.6 * night_blend),
+        };
+        const tentacle_mat = {
+            ...this._mat_tentacle,
+            ambient: this._mat_tentacle.ambient * (1 - night_blend) + 0.82 * night_blend,
+            diffusivity: this._mat_tentacle.diffusivity * (1 - 0.5 * night_blend),
+        };
         for (const j of this.jellyfish)
-            j.draw(caller, uniforms, this.shapes, this._mat_bell, this._mat_tentacle, t);
+            j.draw(caller, uniforms, this.shapes, bell_mat, tentacle_mat, t);
     }
 }
 

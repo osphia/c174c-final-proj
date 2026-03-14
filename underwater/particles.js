@@ -4,7 +4,7 @@ export class Bubble_System {
     constructor() {
         this.shape = new defs.Subdivision_Sphere(2);
         this.material = {
-            shader: new defs.Phong_Shader(),
+            shader: new defs.Phong_Shader(8),
             ambient: 0.6,
             diffusivity: 0.3,
             specularity: 0.9,
@@ -107,7 +107,7 @@ export class Plankton_System {
     constructor() {
         this.shape = new defs.Subdivision_Sphere(1);
         this.material = {
-            shader: new defs.Phong_Shader(),
+            shader: new defs.Phong_Shader(8),
             ambient: 0.8,
             diffusivity: 0.2,
             specularity: 0.0,
@@ -174,11 +174,22 @@ export class Plankton_System {
         }
     }
 
-    draw(caller, uniforms) {
+    draw(caller, uniforms, night_blend = 0) {
+        const mat = {
+            ...this.material,
+            ambient: this.material.ambient * (1 - 0.5 * night_blend) + 0.95 * night_blend,
+            diffusivity: this.material.diffusivity * (1 - 0.65 * night_blend),
+            color: color(
+                this.material.color[0] * (1 - night_blend) + 0.35 * night_blend,
+                this.material.color[1] * (1 - night_blend) + 1.00 * night_blend,
+                this.material.color[2] * (1 - night_blend) + 0.85 * night_blend,
+                this.material.color[3],
+            ),
+        };
         for (const p of this.particles) {
             const transform = Mat4.translation(p.position[0], p.position[1], p.position[2])
                 .times(Mat4.scale(p.size, p.size, p.size));
-            this.shape.draw(caller, uniforms, transform, this.material);
+            this.shape.draw(caller, uniforms, transform, mat);
         }
     }
 }

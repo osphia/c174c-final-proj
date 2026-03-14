@@ -1,33 +1,37 @@
 import {tiny, defs} from './examples/common.js';
-import {Underwater_Camera, Seafloor, Coral_Collection, Underwater_Shader,
+import {Underwater_Camera, Seafloor, Sea_Plants, Lighting_Controller, Coral_Collection,
         Bubble_System, Plankton_System,
         Jellyfish_School, Sea_Turtle, Manta_Ray,
         Fish_Manager} from './underwater/index.js';
 
-// Pull these names into this module's scope for convenience:
-const {vec3, vec4, color, Mat4, Shape, Material, Shader, Texture, Component} = tiny;
+const {vec3, vec4, Mat4, Component} = tiny;
 
 export class Final_Project extends Component {
     init() {
-        // Environment
+        this.night_mode = false;
+
         this.seafloor = new Seafloor();
+        this.corals = new Coral_Collection();
+        this.obstacles = this.corals.get_obstacles(this.seafloor);
+        this.plants = new Sea_Plants(this.obstacles);
+        this.lighting = new Lighting_Controller();
+
         this.bubbles  = new Bubble_System();
         this.plankton = new Plankton_System();
-        this.corals   = new Coral_Collection();
-
-        // Shared obstacle list for P2 (boid avoidance)
-        this.obstacles = this.corals.get_obstacles(this.seafloor);
-
-        // P2 — Fish schools (boids + articulated models)
         this.fish_manager = new Fish_Manager(this.obstacles);
-
-        // P3 — Creatures & Curves
         this.jellyfish = new Jellyfish_School();
         this.turtle    = new Sea_Turtle();
         this.manta     = new Manta_Ray();
     }
 
-    // Ray-sphere intersection: returns distance t, or Infinity if no hit
+    render_controls() {
+        this.key_triggered_button('Night Mode', ['l'], () => this.night_mode = !this.night_mode);
+        this.key_triggered_button('Unfollow', ['Escape'], () => {
+            const cam = this.animated_children.find(c => c instanceof Underwater_Camera);
+            if (cam) cam.follow_target = null;
+        });
+    }
+
     _ray_sphere(origin, dir, center, radius) {
         const ocx = origin[0] - center[0];
         const ocy = origin[1] - center[1];
@@ -55,7 +59,6 @@ export class Final_Project extends Component {
             const len = Math.sqrt(ray_view[0]**2 + ray_view[1]**2 + ray_view[2]**2);
             const rv = vec3(ray_view[0]/len, ray_view[1]/len, ray_view[2]/len);
 
-            // Transform ray to world space using camera_transform (eye-to-world)
             const cam2world = this.uniforms.camera_transform;
             const rd4 = cam2world.times(vec4(rv[0], rv[1], rv[2], 0));
             const ray_dir = vec3(rd4[0], rd4[1], rd4[2]);
@@ -66,16 +69,30 @@ export class Final_Project extends Component {
             let best_t = Infinity;
             let best_fish = null;
             for (const f of all_fish) {
-                const hit_radius = f.size * 1.5;
-                const t = this._ray_sphere(ray_origin, ray_dir, f.position, hit_radius);
+                const t = this._ray_sphere(ray_origin, ray_dir, f.position, f.size * 1.5);
                 if (t < best_t) {
                     best_t = t;
                     best_fish = f;
                 }
             }
-
             controls.follow_target = best_fish;
         });
+    }
+
+    _apply_environment_state(dt) {
+        const blend = this.lighting.update(dt, this.night_mode);
+        const fog_color = this.lighting.current_fog_color();
+        const fog_density = this.lighting.current_fog_density();
+        const ambient = this.lighting.current_ambient();
+
+        this.seafloor.set_fog(fog_color, fog_density, ambient);
+        this.corals.set_fog(fog_color, fog_density);
+        this.plants.set_fog(fog_color, fog_density);
+
+        const jelly_positions = this.jellyfish.get_positions();
+        const coral_lights = this.corals.get_glow_light_data(this.seafloor);
+        this.uniforms.lights = this.lighting.build_lights(jelly_positions, coral_lights);
+        return blend;
     }
 
     render_animation(caller) {
@@ -87,39 +104,30 @@ export class Final_Project extends Component {
             caller.controls.seafloor_height_fn = (x, z) => this.seafloor.get_height(x, z);
             this._setup_click_follow(caller.canvas, caller.controls);
         }
+
         this.uniforms.projection_transform = Mat4.perspective(Math.PI / 4, caller.width / caller.height, 1, 200);
 
-        // Daytime lighting: 1–2 directional lights (w=0) + ambient via materials
-        const sun_dir_1 = vec4(-0.2, 1.0, -0.1, 0);
-        const sun_dir_2 = vec4( 0.3, 0.8,  0.2, 0);
-        this.uniforms.lights = [
-            defs.Phong_Shader.light_source(sun_dir_1, color(0.95, 0.98, 1.00, 1), 1e8),
-            defs.Phong_Shader.light_source(sun_dir_2, color(0.35, 0.55, 0.85, 1), 1e8),
-        ];
+        const dt = Math.min(this.uniforms.animation_delta_time / 1000, 0.05);
+        const t  = this.uniforms.animation_time / 1000;
+        const night_blend = this._apply_environment_state(dt);
 
-        // Time values
-        const dt = this.uniforms.animation_delta_time / 1000;
-        const t  = this.uniforms.animation_time       / 1000;
-
-        // Environment
         this.seafloor.draw(caller, this.uniforms);
-        this.corals.draw(caller, this.uniforms, this.seafloor);
+        this.corals.draw(caller, this.uniforms, this.seafloor, night_blend);
+        this.plants.draw(caller, this.uniforms, this.seafloor, t, night_blend);
 
-        // Particles — bubbles trail behind fish
         const fish_positions = this.fish_manager.get_all_fish().map(f => f.position);
         this.bubbles.update(dt, fish_positions);
         this.bubbles.draw(caller, this.uniforms);
         this.plankton.update(dt);
-        this.plankton.draw(caller, this.uniforms);
+        this.plankton.draw(caller, this.uniforms, night_blend);
 
-        // Fish
         const following = caller.controls && caller.controls.follow_target;
         const cam_pos = (!following && caller.controls) ? caller.controls.position : null;
-        this.fish_manager.update(Math.min(dt, 0.05), cam_pos);
+        this.fish_manager.update(dt, cam_pos);
         this.fish_manager.draw(caller, this.uniforms);
 
         this.jellyfish.update(dt, t);
-        this.jellyfish.draw(caller, this.uniforms, t);
+        this.jellyfish.draw(caller, this.uniforms, t, night_blend);
 
         this.turtle.update(dt);
         this.turtle.draw(caller, this.uniforms, t);
