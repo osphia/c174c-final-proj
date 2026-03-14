@@ -1,5 +1,5 @@
 export {Underwater_Camera} from './camera.js';
-export {Seafloor} from './environment.js';
+export {Seafloor, Sea_Plants, Lighting_Controller} from './environment.js';
 export {Coral_Collection} from './coral.js';
 export {Underwater_Shader} from './shaders.js';
 export {Bubble_System, Plankton_System} from './particles.js';
