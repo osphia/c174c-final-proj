@@ -19,13 +19,13 @@ Open `index.html` in a local web server (e.g. `python3 -m http.server` then navi
 
 ## Implemented Features
 
-### P1 — Environment & Lighting
+### Environment & Lighting
 - **Procedural seafloor** — sine-wave terrain mesh (60×60 grid) with a custom GLSL sand shader featuring procedural ripple and grain texture
 - **Coral reef** — four coral types (branching, brain, tube, fan) scattered in concentric rings; each sits on the terrain surface
 - **Underwater lighting** — two directional sun lights with exponential distance fog applied in every shader to simulate light attenuation with depth
 - **Particle systems** — rising bubble columns anchored to the seafloor and drifting plankton floating in the water column
 
-### P2 — Fish Schools (Algorithms 1 & 3)
+### Fish Schools (Algorithms 1 & 3)
 
 **Algorithm 3 — Articulated Fish Model (Forward Kinematics)**
 
@@ -60,7 +60,7 @@ Three independent schools (30 fish total):
 | Cyan | 12 | `rgb(77, 217, 255)` | 0.6 |
 | Yellow | 8 | `rgb(242, 230, 51)` | 1.1 |
 
-### P3 — Creatures & Curves (Catmull-Rom Splines)
+### Creatures & Curves (Catmull-Rom Splines)
 
 - **Jellyfish school** — pulsing bell animation with trailing tentacles; multiple jellyfish drift along spline paths
 - **Sea turtle** — follows a Catmull-Rom spline loop through the reef with smooth orientation interpolation along the tangent
